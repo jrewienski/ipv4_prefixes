@@ -38,7 +38,7 @@ void ipv4_prefix_print_inorder(void);
  * @return      IPV4_PREFIX_LIST_FULL               If list is full.
  * @return      IPV4_PREFIX_ALREADY_EXISTS          If prefix already exists in the list.
  */
-ipv4_prefix_status ipv4_add(uint32_t base, uint8_t mask);
+ipv4_prefix_status ipv4_prefix_add(uint32_t base, uint8_t mask);
 
 
 /* Removes a prefix from the list.
@@ -51,7 +51,7 @@ ipv4_prefix_status ipv4_add(uint32_t base, uint8_t mask);
  * @return      IPV4_PREFIX_MASK_VALUE_ERROR        If Mask was bigger than 32.
  * @return      IPV4_PREFIX_DOES_NOT_EXIST          If prefix was not on the list exists.
  */
-ipv4_prefix_status ipv4_remove(uint32_t base, uint8_t mask);
+ipv4_prefix_status ipv4_prefix_remove(uint32_t base, uint8_t mask);
 
 
 /* Checks if IPv4 address belongs to any of prefixes on the list.
