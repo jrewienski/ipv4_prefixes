@@ -15,14 +15,16 @@ typedef enum
     IPV4_PREFIX_DOES_NOT_EXIST          /**< IPv4 prefix does not exit on the list. */
 } ipv4_prefix_status;
 
-typedef struct {
+typedef struct ipv4_prefix_node {
     uint32_t base;
     uint8_t mask;
-} ipv4_prefix;
+    struct ipv4_prefix_node* left;
+    struct ipv4_prefix_node* right;
+} ipv4_prefix_node;
 
-/* Prints full list of ipv4 prefixes.
+/* Prints BST of ipv4 prefixes in order.
  */
-void ipv4_prefix_print_list(void);
+void ipv4_prefix_print_inorder(void);
 
 
 /* Adds a prefix to list.
