@@ -42,3 +42,12 @@ Although the task stated that *add* and *remove* methods should be of "int" type
     IPV4_PREFIX_ALREADY_EXISTS,         /**< IPv4 prefix already exists on the list. */
     IPV4_PREFIX_DOES_NOT_EXIST          /**< IPv4 prefix does not exit on the list. */
 ```
+
+## Code coverage
+Code is covered with tests in main.c file.
+To run tests and gcov analysis, run:
+```
+make
+./test.out
+make coverage
+```

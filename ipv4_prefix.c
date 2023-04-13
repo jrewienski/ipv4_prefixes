@@ -48,7 +48,7 @@ ipv4_prefix_status ipv4_prefix_add(uint32_t base, uint8_t mask)
         return err_code;
     }
 
-    if (prefixes_cnt == MAX_PREFIXES)
+    if (prefixes_cnt >= MAX_PREFIXES)
     {
         return IPV4_PREFIX_LIST_FULL;
     }
@@ -67,12 +67,12 @@ ipv4_prefix_status ipv4_prefix_add(uint32_t base, uint8_t mask)
     {
         parent = current;
         if (base < current->base ||
-            (base == current->base && mask > current->mask))
+            (base == current->base && mask < current->mask))
         {
             current = current->left;
         }
         else if (base > current->base ||
-                 (base == current->base && mask < current->mask))
+                 (base == current->base && mask > current->mask))
         {
             current = current->right;
         }
@@ -88,7 +88,7 @@ ipv4_prefix_status ipv4_prefix_add(uint32_t base, uint8_t mask)
         root = tmp;
     }
     else if (base < parent->base ||
-             (base == parent->base && mask > parent->mask))
+             (base == parent->base && mask < parent->mask))
     {
         parent->left = tmp;
     }
@@ -121,19 +121,13 @@ ipv4_prefix_status ipv4_prefix_remove(uint32_t base, uint8_t mask)
     {
         parent = current;
         if (base < current->base ||
-            (base == current->base && mask > current->mask))
+            (base == current->base && mask < current->mask))
         {
             current = current->left;
         }
-        else if (base > current->base ||
-                 (base == current->base && mask < current->mask))
-        {
-            current = current->right;
-        }
         else
         {
-            // Node was found, stop the search
-            break;
+            current = current->right;
         }
     }
 
@@ -161,7 +155,6 @@ ipv4_prefix_status ipv4_prefix_remove(uint32_t base, uint8_t mask)
         if (parent == NULL)
         {
             root = successor;
-            return IPV4_PREFIX_OK;
         }
         else
         {
@@ -207,7 +200,6 @@ ipv4_prefix_status ipv4_prefix_remove(uint32_t base, uint8_t mask)
     }
 
     prefixes_cnt--;
-
     return IPV4_PREFIX_OK;
 }
 

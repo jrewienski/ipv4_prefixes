@@ -61,6 +61,6 @@ ipv4_prefix_status ipv4_prefix_remove(uint32_t base, uint8_t mask);
  * @return      mask    Mask of lowest prefix that covers given IPv4 address.
  * @return      -1      If IPv4 Base and Mask did not match.
  */
-int8_t ipv4_check(uint32_t ipv4);
+int8_t ipv4_prefix_check(uint32_t ipv4);
 
 #endif /* _IPV4_PREFIX_H_ */
