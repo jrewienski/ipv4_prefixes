@@ -51,3 +51,15 @@ make
 ./test.out
 make coverage
 ```
+
+At the moment code coverage is at 100% (by gcov):
+```
+gcov main.c ipv4_prefix.c
+File 'main.c'
+Lines executed:100.00% of 58
+Creating 'main.c.gcov'
+
+File 'ipv4_prefix.c'
+Lines executed:100.00% of 112
+Creating 'ipv4_prefix.c.gcov'
+```
