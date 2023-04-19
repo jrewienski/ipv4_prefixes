@@ -1,26 +1,8 @@
 #include "ipv4_prefix.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 
-static uint8_t prefixes_cnt = 0;
-ipv4_prefix_node *root = NULL;
-
-void traverse_inorder(ipv4_prefix_node *current)
-{
-    if (current != NULL)
-    {
-        traverse_inorder(current->left);
-        printf("%u/%d -> ", current->base, current->mask);
-        traverse_inorder(current->right);
-    }
-}
-
-void ipv4_prefix_print_inorder(void)
-{
-    traverse_inorder(root);
-    printf("end\n");
-}
+ipv4_prefix_trie_node *trie_root = NULL;
 
 ipv4_prefix_status ipv4_prefix_validate(uint32_t base, uint8_t mask)
 {
@@ -29,7 +11,7 @@ ipv4_prefix_status ipv4_prefix_validate(uint32_t base, uint8_t mask)
         return IPV4_PREFIX_MASK_VALUE_ERROR;
     }
 
-    for (uint8_t i = 0; i < mask; i++)
+    for (int8_t i = MAX_MASK_VALUE - 1 - mask; i >= 0; i--)
     {
         if ((base >> i) & 0x1)
             return IPV4_PREFIX_BASE_MASK_MISMATCH;
@@ -48,57 +30,11 @@ ipv4_prefix_status ipv4_prefix_add(uint32_t base, uint8_t mask)
         return err_code;
     }
 
-    if (prefixes_cnt >= MAX_PREFIXES)
-    {
-        return IPV4_PREFIX_LIST_FULL;
+    if (trie_root == NULL) {
+        initR();
     }
 
-    // Non recursive Binary Search Tree insertion
-    ipv4_prefix_node *current = root;
-    ipv4_prefix_node *parent = NULL;
-    ipv4_prefix_node *tmp = malloc(sizeof(ipv4_prefix_node));
-    tmp->base = base;
-    tmp->mask = mask;
-    tmp->left = NULL;
-    tmp->right = NULL;
-
-    // Searching the tree until we hit an empty leaf (NULL)
-    while (current != NULL)
-    {
-        parent = current;
-        if (base < current->base ||
-            (base == current->base && mask < current->mask))
-        {
-            current = current->left;
-        }
-        else if (base > current->base ||
-                 (base == current->base && mask > current->mask))
-        {
-            current = current->right;
-        }
-        else
-        {
-            return IPV4_PREFIX_ALREADY_EXISTS;
-        }
-    }
-
-    // When we found the leaf node, update its parent
-    if (parent == NULL)
-    {
-        root = tmp;
-    }
-    else if (base < parent->base ||
-             (base == parent->base && mask < parent->mask))
-    {
-        parent->left = tmp;
-    }
-    else
-    {
-        parent->right = tmp;
-    }
-
-    prefixes_cnt++;
-    return IPV4_PREFIX_OK;
+    return insert(base, mask);
 }
 
 ipv4_prefix_status ipv4_prefix_remove(uint32_t base, uint8_t mask)
@@ -111,119 +47,149 @@ ipv4_prefix_status ipv4_prefix_remove(uint32_t base, uint8_t mask)
         return err_code;
     }
 
-    ipv4_prefix_node *current = root;
-    ipv4_prefix_node *parent = NULL;
-    ipv4_prefix_node *successor = NULL;
-    ipv4_prefix_node *successor_parent = NULL;
-
-    // Searching the tree until we hit an empty leaf
-    while (current != NULL && (base != current->base || mask != current->mask))
-    {
-        parent = current;
-        if (base < current->base ||
-            (base == current->base && mask < current->mask))
-        {
-            current = current->left;
-        }
-        else
-        {
-            current = current->right;
-        }
-    }
-
-    // If search finished at empty leaf, no node to delete
-    if (current == NULL)
-    {
+    if (trie_root == NULL) {
         return IPV4_PREFIX_DOES_NOT_EXIST;
     }
 
-    // Case if node to delete is a leaf or has only one child
-    if (current->left == NULL || current->right == NULL)
-    {
-        // First, check which node is there (if any) and set it as successor node
-        if (current->left == NULL)
-        {
-            successor = current->right;
-        }
-        else
-        {
-            successor = current->left;
-        }
+    uint8_t current_bit;
+    ipv4_prefix_trie_node* parent = trie_root;
+    ipv4_prefix_trie_node* current = NULL;
+    ipv4_prefix_trie_node* chain[mask+1]; // +1 for root node
 
-        // If there's no parent, then it means root node is being removed, need
-        // to update root
-        if (parent == NULL)
-        {
-            root = successor;
-        }
-        else
-        {
-            // else, update parent of removed node to point to its successor
-            if (parent->left == current)
-            {
-                parent->left = successor;
-            }
-            else
-            {
-                parent->right = successor;
-            }
-        }
-
-        free(current);
+    for (uint8_t i = 0; i <= mask; i++) {
+        chain[i] = NULL;
     }
-    else
-    { // If removed node has both children, we choose smallest node from
-      // right
-        // subtree.
-        successor = current->right;
-        while (successor->left != NULL)
-        {
-            successor_parent = successor;
-            successor = successor->left;
+    chain[0] = parent;
+
+    // Traverse from root
+    for (uint8_t i = 1; i <= mask; i++) {
+        chain[i] = parent;
+        current_bit = (base >> (32 - i)) & 0x1;
+        if (current_bit) {
+            if (parent->one) {
+                current = parent->one;
+            } else {
+                return IPV4_PREFIX_DOES_NOT_EXIST;
+            }
+        } else {
+            if (parent->zero) {
+                current = parent->zero;
+            } else {
+                return IPV4_PREFIX_DOES_NOT_EXIST;
+            } 
         }
 
-        // There's no more 'left' to go, so update the successors parent with
-        // successors 'right' subtree.
-        if (successor_parent != NULL)
-        {
-            successor_parent->left = successor->right;
-        }
-        else
-        { // The right subtree did not have 'left'
-            current->right = successor->right;
-        }
-
-        // Copy data from successor to current node and free succesory memory.
-        current->base = successor->base;
-        current->mask = successor->mask;
-        free(successor);
+        parent = current;
     }
 
-    prefixes_cnt--;
+    // If traversed to given prefix, but it's only an intermediate node.
+    if (current->word_end == false) {
+        return IPV4_PREFIX_DOES_NOT_EXIST;
+    }
+
+    // Prefix node had children - meaning subprefixes are used, do not delete.
+    if (current->zero || current->one) {
+        current->word_end = false;
+        return IPV4_PREFIX_OK;
+    }
+
+    // Traverse back
+    for (int8_t i = mask; i >= 1; i--){
+        current = chain[i];
+        parent = chain[i-1];
+        if (parent->zero == current) {
+            parent->zero = NULL;
+            free(current);
+        } else {
+            parent->one = NULL;
+            free(current);
+        }
+
+        // Reached a point where node was had more then one child or is a word-end.
+        // Cannot delete any more nodes.
+        if (parent->zero != NULL || parent->one != NULL || parent->word_end == true) {
+            break;
+        }
+    }
+
     return IPV4_PREFIX_OK;
 }
 
 int8_t ipv4_prefix_check(uint32_t ipv4)
 {
-    ipv4_prefix_node *current = root;
+    uint8_t current_bit;
+    int8_t highest_mask = -1;
+    uint8_t depth = 0;
+    ipv4_prefix_trie_node* parent = trie_root;
+    ipv4_prefix_trie_node* current = NULL;
 
-    // Search through BST, if we run into an empty leaf (NULL) it means the IPv4
-    // is not in range of stored prefixes.
-    while (current != NULL)
-    {
-        if ((ipv4 >> current->mask) < (current->base >> current->mask))
-        {
-            current = current->left;
+    if (parent == NULL) return -1;
+
+    for (int i = 31; i >= 0; i--){
+        current_bit = (ipv4 >> i) & 0x1;
+        if (current_bit) {
+            current = parent->one;
+        } else {
+            current = parent->zero;
         }
-        else if ((ipv4 >> current->mask) > (current->base >> current->mask))
-        {
-            current = current->right;
+        depth++;
+
+
+        if (current == NULL) {
+            break;
+        } else {
+            if (current->word_end) highest_mask = depth;
         }
-        else
-        {
-            return (int8_t)current->mask;
-        }
+        parent = current;
     }
 
-    return -1;
+    return highest_mask;
+}
+
+void initR() {
+    trie_root = malloc(sizeof(ipv4_prefix_trie_node));
+    trie_root->one = NULL;
+    trie_root->zero = NULL;
+    trie_root->word_end = false;
+}
+
+
+ipv4_prefix_status insert(uint32_t base, uint8_t mask) {
+    uint8_t i = 0;
+    uint8_t current_bit;
+    ipv4_prefix_trie_node* parent = trie_root;
+    ipv4_prefix_trie_node* current = NULL;
+
+    // Traverse from root
+    while (i < mask) {
+        current_bit = (base >> (31 - i)) & 0x1;
+        if (current_bit) {
+            if (parent->one) {
+                current = parent->one;
+            } else {
+                current = malloc(sizeof(ipv4_prefix_trie_node));
+                current->word_end = false;
+                parent->one = current;
+            }
+        } else {
+            if (parent->zero) {
+                current = parent->zero;
+            } else {
+                // printf("here");
+                current = malloc(sizeof(ipv4_prefix_trie_node));
+                current->word_end = false;
+                parent->zero = current;
+            } 
+        }
+
+        parent = current;
+        i++;
+    }
+
+    if (current->word_end == false) {
+        current->word_end = true;
+        return IPV4_PREFIX_OK;
+    } else {
+        return IPV4_PREFIX_ALREADY_EXISTS;
+    }
 }

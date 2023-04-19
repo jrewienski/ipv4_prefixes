@@ -1,9 +1,85 @@
 #include <stdio.h>
 #include <assert.h>
 #include "ipv4_prefix.h"
+#include "utils.h"
 
 
 int main(void) {
+    printf("Table of used IPv4 for prefix tests\n");
+    print_ipv4_info("192.0.0.0");
+    print_ipv4_info("192.168.0.0");
+    print_ipv4_info("192.168.10.0");
+    print_ipv4_info("192.168.16.0");
+    print_ipv4_info("0.0.0.0");
+    print_ipv4_info("255.255.255.255");
+
+    /* Removal when empty */
+    assert(ipv4_prefix_remove(ipv4_strtouint32("192.0.0.0"), 4) == IPV4_PREFIX_DOES_NOT_EXIST);
+    assert(ipv4_prefix_remove(ipv4_strtouint32("192.0.0.1"), 32) == IPV4_PREFIX_DOES_NOT_EXIST);
+    assert(ipv4_prefix_remove(ipv4_strtouint32("0.0.0.0"), 0) == IPV4_PREFIX_DOES_NOT_EXIST);
+    assert(ipv4_prefix_remove(ipv4_strtouint32("255.255.255.255"), 32) == IPV4_PREFIX_DOES_NOT_EXIST);
+    assert(ipv4_prefix_remove(ipv4_strtouint32("255.255.255.255"), 31) == IPV4_PREFIX_BASE_MASK_MISMATCH);
+
+
+    /* Adding multiple same base with various mask and checking IPv4 */
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == -1);
+    assert(ipv4_prefix_add(ipv4_strtouint32("192.0.0.0"), 4) == IPV4_PREFIX_OK);
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == 4);
+    assert(ipv4_prefix_add(ipv4_strtouint32("192.0.0.0"), 24) == IPV4_PREFIX_OK);
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == 24);
+    assert(ipv4_prefix_add(ipv4_strtouint32("192.0.0.0"), 2) == IPV4_PREFIX_OK);
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == 24);
+    assert(ipv4_prefix_add(ipv4_strtouint32("192.0.0.0"), 16) == IPV4_PREFIX_OK);
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == 24);
+    assert(ipv4_prefix_add(ipv4_strtouint32("192.0.0.1"), 32) == IPV4_PREFIX_OK);
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == 32);
+
+    /* Base and mask mismatch */
+    assert(ipv4_prefix_add(ipv4_strtouint32("192.168.16.0"), 16) == IPV4_PREFIX_BASE_MASK_MISMATCH);
+    assert(ipv4_prefix_add(ipv4_strtouint32("192.168.16.0"), 4) == IPV4_PREFIX_BASE_MASK_MISMATCH);
+    assert(ipv4_prefix_add(ipv4_strtouint32("192.168.16.0"), 24) == IPV4_PREFIX_OK);
+
+    /* Removal */
+    // assert(ipv4_prefix_remove(ipv4_strtouint32("192.0.0.0"), 4) == IPV4_PREFIX_OK);
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == 32);
+    assert(ipv4_prefix_remove(ipv4_strtouint32("192.0.0.1"), 32) == IPV4_PREFIX_OK);
+    assert(ipv4_prefix_remove(ipv4_strtouint32("192.0.0.1"), 32) == IPV4_PREFIX_DOES_NOT_EXIST);
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == 24);
+    assert(ipv4_prefix_remove(ipv4_strtouint32("192.0.0.0"), 16) == IPV4_PREFIX_OK);
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == 24);
+    assert(ipv4_prefix_remove(ipv4_strtouint32("192.0.0.0"), 24) == IPV4_PREFIX_OK);
+    assert(ipv4_prefix_check(ipv4_strtouint32("192.0.0.1")) == 4);
+
+
+
+
+    return 0;
+
+    // bin. 1100 0000. 1010 1000 . 0000 1010 . 1100 1000 = 3232238280
+    // 192.168.10.200 / 24   
+    // assert(ipv4_prefix_add(3232238280, 30) == IPV4_PREFIX_OK);
+    // assert(ipv4_prefix_add(3232238080, 30) == IPV4_PREFIX_OK);
+    // assert(ipv4_prefix_add(3232238080, 16) == IPV4_PREFIX_BASE_MASK_MISMATCH);
+    // assert(ipv4_prefix_add(3232238080, 26) == IPV4_PREFIX_OK);
+
+
+    // assert(ipv4_prefix_add(3231711232, 12) == IPV4_PREFIX_OK);  // 192.160.00.0 / 12
+    // assert(ipv4_prefix_add(3231711232, 24) == IPV4_PREFIX_OK);  // 192.160.00.0 / 24
+
+    // ipv4_prefix_print_inorder();
+    // print2D();
+    printf("Res for 192.160.0.1 -> %d\n", ipv4_prefix_check(3231711233));  /// 192.160.0.1  -> should return 24 (!)
+
+    printf("Res for 192.160.0.1 -> %d\n", ipv4_prefix_check(3231711233));  /// 192.160.0.1  -> should return 24 (!)
+
+    // 3232238088  = 192.168.10.8
+    printf("Res for 192.168.10.8 -> %d\n", ipv4_prefix_check(3232238088));
+    printf("Res for 192.168.10.1 -> %d\n", ipv4_prefix_check(3232238081));
+    // assert(ipv4_prefix_check(3232238088) == 24);
+
+
+
+    return 0;
     /* Tests when no prefixes exist */
     assert(ipv4_prefix_remove(2560, 1) == IPV4_PREFIX_DOES_NOT_EXIST);
     assert(ipv4_prefix_check(32858) == -1);
@@ -50,7 +126,7 @@ int main(void) {
     assert(ipv4_prefix_add(19, 0) == IPV4_PREFIX_OK);
     assert(ipv4_prefix_add(5, 0) == IPV4_PREFIX_OK);
     assert(ipv4_prefix_add(1, 0) == IPV4_PREFIX_OK);
-    // Use print function just to cover 100% with tests
+    // Use print function just to cover 100% of code with test
     ipv4_prefix_print_inorder();
 
     assert(ipv4_prefix_remove(15, 0) == IPV4_PREFIX_OK);

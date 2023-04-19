@@ -1,16 +1,19 @@
-CFLAGS = --coverage -Wall -fprofile-arcs -ftest-coverage
+CFLAGS = --coverage -Wall -fprofile-arcs -ftest-coverage -g -pedantic
 
-test : main.o ipv4_prefix.o
-		cc -o test.out $(CFLAGS) main.o ipv4_prefix.o
+test : main.o ipv4_prefix.o utils.o
+		cc -o test.out $(CFLAGS) main.o ipv4_prefix.o utils.o
 
-main.o : main.c ipv4_prefix.h
+main.o : main.c ipv4_prefix.h utils.h
 		cc $(CFLAGS) -c main.c
 
-ipv4_prefix.o : ipv4_prefix.c ipv4_prefix.h
+ipv4_prefix.o : ipv4_prefix.c ipv4_prefix.h utils.h
 		cc $(CFLAGS) -c ipv4_prefix.c
 
+utils.o : utils.c utils.h
+		cc $(CFLAGS) -c utils.c
+
 coverage :
-	gcov main.c ipv4_prefix.c
+	gcov main.c ipv4_prefix.c utis.c
 
 clean :
-		rm test.out main.o ipv4_prefix.o *.gcno *.gcda *.gcov 
+		rm test.out main.o ipv4_prefix.o utils.o *.gcno *.gcda *.gcov 

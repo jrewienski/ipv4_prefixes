@@ -1,6 +1,7 @@
 #ifndef _IPV4_PREFIX_H_
 #define _IPV4_PREFIX_H_
 #include <stdint.h>
+#include <stdbool.h>
 
 #define MAX_MASK_VALUE      32
 #define MAX_PREFIXES       100
@@ -21,6 +22,22 @@ typedef struct ipv4_prefix_node {
     struct ipv4_prefix_node* left;
     struct ipv4_prefix_node* right;
 } ipv4_prefix_node;
+
+
+// typedef struct ipv4_prefix_trie_node {
+//     uint32_t base;
+//     uint8_t mask;
+//     struct ipv4_prefix_trie_node* zero;
+//     struct ipv4_prefix_trie_node* one;
+//     bool word_end;
+// } ipv4_prefix_trie_node;
+
+typedef struct ipv4_prefix_trie_node {
+    struct ipv4_prefix_trie_node* zero;
+    struct ipv4_prefix_trie_node* one;
+    bool word_end;
+} ipv4_prefix_trie_node;
+
 
 /* Prints BST of ipv4 prefixes in order.
  */
@@ -62,5 +79,9 @@ ipv4_prefix_status ipv4_prefix_remove(uint32_t base, uint8_t mask);
  * @return      -1      If IPv4 Base and Mask did not match.
  */
 int8_t ipv4_prefix_check(uint32_t ipv4);
+
+ipv4_prefix_status insert(uint32_t base, uint8_t mask);
+void initR();
+
 
 #endif /* _IPV4_PREFIX_H_ */
