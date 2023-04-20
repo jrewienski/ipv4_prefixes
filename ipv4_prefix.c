@@ -1,5 +1,6 @@
 #include "ipv4_prefix.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 
 ipv4_prefix_trie_node *trie_root = NULL;
@@ -53,6 +54,8 @@ static ipv4_prefix_status node_insert(uint32_t base, uint8_t mask)
                 if (!current)
                     return IPV4_PREFIX_INSUFFICIENT_MEM;
                 current->word_end = false;
+                current->one = NULL;
+                current->zero = NULL;
                 parent->one = current;
             }
         }
@@ -68,6 +71,8 @@ static ipv4_prefix_status node_insert(uint32_t base, uint8_t mask)
                 if (!current)
                     return IPV4_PREFIX_INSUFFICIENT_MEM;
                 current->word_end = false;
+                current->one = NULL;
+                current->zero = NULL;
                 parent->zero = current;
             }
         }
@@ -106,13 +111,12 @@ ipv4_prefix_status node_remove(uint32_t base, uint8_t mask)
     {
         chain[i] = NULL;
     }
-    chain[0] = parent;
+    chain[0] = trie_root;
 
     // Traverse from root, add nodes to chain[]
     // Return if there is no node (e.g. for 11001 we have found branch 110, but no further 0).
     for (uint8_t i = 1; i <= mask; i++)
     {
-        chain[i] = parent;
         if ((base >> (MAX_MASK_VALUE - i)) & 0x1)
         {
             if (parent->one)
@@ -137,6 +141,7 @@ ipv4_prefix_status node_remove(uint32_t base, uint8_t mask)
         }
 
         parent = current;
+        chain[i] = parent;
     }
 
     // If traversed to given prefix, but it's only an intermediate node, not end of word.
@@ -155,7 +160,7 @@ ipv4_prefix_status node_remove(uint32_t base, uint8_t mask)
 
     // Traverse back to remove all chain nodes from leaf to root.
     // Break if a given node has another child (another subtree).
-    for (int8_t i = mask; i >= 1; i--)
+    for (int8_t i = mask; i > 0; i--)
     {
         current = chain[i];
         parent = chain[i - 1];
@@ -270,8 +275,9 @@ int8_t ipv4_prefix_check(uint32_t ipv4)
         {
             // If node is a word end, it means IPv4 is in range of prefixes
             // Need to continue the smallest range (highest mask = depth in trie)
-            if (current->word_end)
+            if (current->word_end == true) {
                 highest_mask = depth;
+            }
         }
         parent = current;
     }

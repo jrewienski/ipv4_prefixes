@@ -58,3 +58,4 @@ dkms.conf
 
 ## IDE
 .vscode
+.DS_Store
