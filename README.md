@@ -41,7 +41,7 @@ Set of util functions allowing to use IPv4 prefixes and IPv4 for testing in stri
 # Testing
 Main file consists of number of assertions, that do basic tests for addition, removal and check.
 
-# Simple tests
+## Simple tests
 Few simple tests provided:
 - Removal when empty
 - Mask incorrect (>32) and mask and base mismatch
@@ -50,7 +50,7 @@ Few simple tests provided:
 - Base and mask mismatch
 - Basic removal
 
-# Complex test
+## Complex test
 More complex test of removal shows such trie:
 
 ![Trie for complex removal test](/docs/img/testing_trie.png "Trie for complex removal test")
@@ -75,14 +75,26 @@ At the moment code coverage is at 97% (by gcov), due to not checking running out
 ```
 gcov main.c ipv4_prefix.c utils.c
 File 'main.c'
-Lines executed:100.00% of 72
+Lines executed:100.00% of 85
 Creating 'main.c.gcov'
 
 File 'ipv4_prefix.c'
-Lines executed:96.99% of 133
+Lines executed:97.24% of 145
 Creating 'ipv4_prefix.c.gcov'
 
 File 'utils.c'
 Lines executed:90.91% of 33
 Creating 'utils.c.gcov'
+```
+
+## Static code analysis
+Cppcheck does not mark any warnings (except for stdlibrary headers) or issues:
+
+```
+cppcheck --enable=all main.c ipv4_prefix.c
+Checking ipv4_prefix.c ...
+1/2 files checked 53% done
+Checking main.c ...
+2/2 files checked 100% done
+nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingIncludeSystem]
 ```

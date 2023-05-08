@@ -35,7 +35,16 @@ static ipv4_prefix_status root_init(void)
 static ipv4_prefix_status node_insert(uint32_t base, uint8_t mask)
 {
     ipv4_prefix_trie_node *parent = trie_root;
-    ipv4_prefix_trie_node *current = NULL;
+    ipv4_prefix_trie_node *current = trie_root;
+
+    // if (mask == 0) {
+    //     if (trie_root->word_end == false) {
+    //         trie_root->word_end = true;
+    //         return IPV4_PREFIX_OK;
+    //     } else {
+    //         return IPV4_PREFIX_ALREADY_EXISTS;
+    //     }
+    // }
 
     // Traverse from root, to create all missing nodes for given prefix.
     for (uint8_t i = 0; i < mask; i++)
@@ -82,7 +91,7 @@ static ipv4_prefix_status node_insert(uint32_t base, uint8_t mask)
 
     // Finally, when landed on the last masked bit of prefix, set the word_end flag to true.
     // If it was true already, that means the prefix already existed.
-    if (current->word_end == false)
+    if (current && current->word_end == false)
     {
         current->word_end = true;
         return IPV4_PREFIX_OK;
@@ -104,8 +113,21 @@ static ipv4_prefix_status node_insert(uint32_t base, uint8_t mask)
 ipv4_prefix_status node_remove(uint32_t base, uint8_t mask)
 {
     ipv4_prefix_trie_node *parent = trie_root;
-    ipv4_prefix_trie_node *current = NULL;
+    ipv4_prefix_trie_node *current = trie_root;
     ipv4_prefix_trie_node *chain[mask + 1]; // Storing the whole branch, +1 for the root node.
+
+    // Cover edge-case of mask == 0, where trie-root has to be freed / updated.
+    if (mask == 0) {
+        if (trie_root->word_end) {
+            if ((trie_root->zero == NULL) && (trie_root->one == NULL)) {
+                free(trie_root);
+                trie_root = NULL;
+            } else {
+                trie_root->word_end = false;
+            }
+            return IPV4_PREFIX_OK;
+        }
+    }
 
     for (uint8_t i = 0; i <= mask; i++)
     {
@@ -175,7 +197,7 @@ ipv4_prefix_status node_remove(uint32_t base, uint8_t mask)
             free(current);
         }
 
-        // Reached a point where node was had more then one child or is a word-end.
+        // Reached a point where node had more then one child or is a word-end.
         // Cannot delete any more nodes.
         if (parent->zero != NULL || parent->one != NULL || parent->word_end == true)
         {
@@ -250,8 +272,11 @@ int8_t ipv4_prefix_check(uint32_t ipv4)
     ipv4_prefix_trie_node *current = NULL;
 
     // If there is no root, the IPv4 prefix list is empty, return -1.
-    if (!trie_root)
+    if (!trie_root) {
         return IPV4_NOT_IN_PREFIXES_RANGE;
+    } else if (trie_root->word_end) {
+        highest_mask = 0;
+    }
 
     // Traverse the trie from root
     for (int i = MAX_MASK_VALUE - 1; i >= 0; i--)
